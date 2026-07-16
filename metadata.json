@@ -1,0 +1,6 @@
+{
+  "name": "Arcadia AI",
+  "description": "A high-end collaborative AI novel writing platform with multi-agent orchestration, knowledge base engine, and real-time steering controls.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

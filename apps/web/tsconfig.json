@@ -1,0 +1,18 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "types": ["vite/client"],
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@arcadia/shared": ["../../packages/shared/src/index.ts"]
+    },
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "strict": false,
+    "noImplicitAny": false
+  },
+  "include": ["src", "vite.config.ts"]
+}
