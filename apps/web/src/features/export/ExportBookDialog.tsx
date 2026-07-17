@@ -7,6 +7,7 @@ import { BookOpen, Check } from 'lucide-react';
 import type { BookProject } from '@arcadia/shared';
 import { useDialogStore } from '../../stores';
 import { Dialog, Button } from '../../components';
+import { formatSkill, normalizeSkills } from '../../lib/format';
 
 interface Props {
   book: BookProject;
@@ -31,7 +32,8 @@ export function ExportBookDialog({ book }: Props) {
     doc += `## 独立世界观大本营\n${book.worldview}\n\n`;
     doc += `## 核心人设契约\n`;
     book.characters.forEach((c) => {
-      doc += `### ${c.name} (${c.role})\n* 描述: ${c.description}\n* 专属特技/技能: ${c.skills?.join(', ') || '暂无'}\n\n`;
+      const skills = normalizeSkills(c.skills);
+      doc += `### ${c.name} (${c.role})\n* 描述: ${c.description}\n* 专属特技/技能: ${skills.join(', ') || '暂无'}\n\n`;
     });
     doc += `## 正式章节内容\n\n`;
     book.chapters
@@ -132,14 +134,17 @@ export function ExportBookDialog({ book }: Props) {
                     <p className="text-[10px] text-gray-500 leading-relaxed">{char.description}</p>
                     {char.skills && char.skills.length > 0 && (
                       <div className="flex flex-wrap gap-1 pt-1 border-t border-gray-200/50">
-                        {char.skills.map((s, idx) => (
-                          <span
-                            key={idx}
-                            className="text-[8px] bg-[#788E76]/10 text-[#4A5A48] px-1.5 py-0.5 rounded leading-none"
-                          >
-                            ⚡ {s}
-                          </span>
-                        ))}
+                        {char.skills.map((s, idx) => {
+                          const label = formatSkill(s);
+                          return (
+                            <span
+                              key={idx}
+                              className="text-[8px] bg-[#788E76]/10 text-[#4A5A48] px-1.5 py-0.5 rounded leading-none"
+                            >
+                              ⚡ {label}
+                            </span>
+                          );
+                        })}
                       </div>
                     )}
                   </div>

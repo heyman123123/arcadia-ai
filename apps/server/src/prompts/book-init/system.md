@@ -11,7 +11,7 @@ You must output a JSON object containing:
    - "name": Character name
    - "role": Role in story (e.g. Protagonist, Antagonist, Mentor)
    - "description": Brief bio and personality
-   - "skills": An array of 2 unique skills, combat moves, or magic spells with descriptions.
+   - "skills": An array of 2 unique **plain strings** — each element is just the skill/move/spell name (e.g. "以太光刃 · 一闪"). Do NOT return objects here. Skills that need longer flavor text can be expanded in the "description" field above, not inside skills.
 3. "writingPrompt": A detailed writing style directive ("Director's Prompt") describing the prose style, emotional tone, and literary constraints.
 4. "outline": An array of 5 chapters. For each chapter, provide:
    - "number": Chapter number (1-5)

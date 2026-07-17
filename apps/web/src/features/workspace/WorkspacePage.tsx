@@ -10,7 +10,7 @@ import type { BookProject } from '@arcadia/shared';
 import { useBooksStore, useDialogStore, useNewBookStore, usePipelineStore, useSettingsStore, useWorkspaceStore } from '../../stores';
 import { Tabs, type TabItem, Tag } from '../../components';
 import { WorkflowProgress } from './WorkflowProgress';
-import { ChapterNavigator } from './ChapterNavigator';
+import { ChapterList } from './ChapterList';
 import { ChapterEditor } from './ChapterEditor';
 import { AgentStatusBoard } from './AgentStatusBoard';
 import { LogTerminal } from './LogTerminal';
@@ -38,6 +38,7 @@ export interface WorkspaceHandlers {
   onAcceptLore: () => void;
   onDismissLore: () => void;
   onChangeChapter: (idx: number) => void;
+  onToggleAutoPilot: () => void;
 }
 
 interface Props {
@@ -144,15 +145,20 @@ export function WorkspacePage({ book, handlers }: Props) {
           chapterStatus={book.chapters[book.currentChapterIndex]?.status ?? 'pending'}
           onRunNext={handlers.onRunNext}
           onPause={handlers.onPause}
+          onToggleAutoPilot={handlers.onToggleAutoPilot}
         />
-        <ChapterNavigator
-          book={book}
-          onChangeChapter={handlers.onChangeChapter}
-          onOpenExport={handlers.onOpenExport}
-        />
-        <ChapterEditor book={book} />
-        <AgentStatusBoard />
-        <LogTerminal />
+        <div className="flex-1 flex overflow-hidden min-h-0">
+          <ChapterList
+            book={book}
+            onChangeChapter={handlers.onChangeChapter}
+            onOpenExport={handlers.onOpenExport}
+          />
+          <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+            <ChapterEditor book={book} />
+            <AgentStatusBoard />
+            <LogTerminal />
+          </div>
+        </div>
       </main>
 
       {/* === RIGHT HUD === */}

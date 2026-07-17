@@ -5,6 +5,7 @@
 import { BookMarked } from 'lucide-react';
 import type { BookProject } from '@arcadia/shared';
 import { Card } from '../../components';
+import { formatSkill } from '../../lib/format';
 
 interface Props {
   book: BookProject;
@@ -32,12 +33,14 @@ export function ActiveContextCard({ book, activeHighlights }: Props) {
                 <span className="text-[10px] font-bold text-gray-700">{char.name}</span>
                 <div className="flex flex-wrap gap-1">
                   {char.skills?.map((sk, skIdx) => {
+                    const label = formatSkill(sk);
+                    const firstToken = label.split(/[\s(]/)[0] || label;
                     const isActive =
                       activeHighlights.length === 0 ||
                       activeHighlights.some(
                         (h) =>
                           h.toLowerCase().includes(char.name.split(' ')[0].toLowerCase()) ||
-                          h.toLowerCase().includes(sk.split(' ')[0].toLowerCase()),
+                          h.toLowerCase().includes(firstToken.toLowerCase()),
                       );
                     return (
                       <span
@@ -48,7 +51,7 @@ export function ActiveContextCard({ book, activeHighlights }: Props) {
                             : 'bg-gray-50 text-gray-300 border border-gray-100'
                         }`}
                       >
-                        {sk.split(' ')[0]} {isActive ? '● 活跃' : ''}
+                        {firstToken} {isActive ? '● 活跃' : ''}
                       </span>
                     );
                   })}

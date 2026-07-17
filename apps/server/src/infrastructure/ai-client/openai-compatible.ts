@@ -46,15 +46,13 @@ export class OpenAICompatibleClient implements ProviderClient {
             { role: 'user', content: opts.prompt },
           ],
           temperature: 0.7,
-          max_tokens: 8192,
-        },
-        { timeout: 60_000 },
+        }
       );
     } catch (err: any) {
       // 标准化错误信息
       const status = err?.status ?? err?.response?.status ?? 'unknown';
       const message = err?.message ?? 'AI request failed';
-      console.log(message,"message>>>")
+      console.log(response,"message>>>")
       throw new Error(`[AI:${this.label}] HTTP ${status} ${message}`);
     }
 

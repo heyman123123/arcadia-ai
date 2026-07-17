@@ -60,6 +60,7 @@ import {
   useEditingStore,
   useDialogStore,
 } from './stores';
+import { normalizeBook, normalizeSkills } from './lib/format';
 import { bookApi, agentApi, ApiError } from './api';
 import { BookshelfPage } from './features/bookshelf';
 import { WorkspacePage, type WorkspaceHandlers } from './features/workspace';
@@ -242,7 +243,10 @@ export default function App() {
           ...b,
           brief: briefVal || '由 AI 辅助初始化的精彩故事。',
           worldview: aiBookData.worldview,
-          characters: aiBookData.characters as Character[],
+          characters: (aiBookData.characters as Character[]).map((c) => ({
+            ...c,
+            skills: normalizeSkills(c.skills),
+          })),
           writingPrompt: aiBookData.writingPrompt || customPromptVal || '整体文笔清新治愈，风格优美。',
           chapters: aiBookData.outline.map((ch) => ({
             number: ch.number,
@@ -309,11 +313,13 @@ export default function App() {
     }
 
     try {
+      // 防御:即使 store 没清洗干净,发请求前再规整一次,避免 server zod 拒掉
+      const safeBook = normalizeBook(activeBook);
       const result = await agentApi.runPipelineStep({
-        title: activeBook.title,
-        genre: activeBook.genre,
-        worldview: activeBook.worldview,
-        characters: activeBook.characters,
+        title: safeBook.title,
+        genre: safeBook.genre,
+        worldview: safeBook.worldview,
+        characters: safeBook.characters,
         writingPrompt: activeBook.writingPrompt,
         chapters: activeBook.chapters,
         currentChapterIndex: activeBook.currentChapterIndex,
@@ -376,11 +382,12 @@ export default function App() {
     addPipelineLog('大纲智子 (Outline Agent)', '⚖️ 正在深度剖析刚生成的章节正文，推演未完结章节的发展逻辑...', 'info');
 
     try {
+      const safeBook2 = normalizeBook(activeBook);
       const result = await agentApi.rollOutline({
-        title: activeBook.title, genre: activeBook.genre, worldview: activeBook.worldview,
-        characters: activeBook.characters, writingPrompt: activeBook.writingPrompt,
-        chapters: activeBook.chapters, currentChapterIndex: activeBook.currentChapterIndex,
-        knowledgeBase: activeBook.knowledgeBase,
+        title: safeBook2.title, genre: safeBook2.genre, worldview: safeBook2.worldview,
+        characters: safeBook2.characters, writingPrompt: safeBook2.writingPrompt,
+        chapters: safeBook2.chapters, currentChapterIndex: safeBook2.currentChapterIndex,
+        knowledgeBase: safeBook2.knowledgeBase,
       });
 
       if (result.updatedChapters && result.updatedChapters.length > 0) {
@@ -403,12 +410,72 @@ export default function App() {
       addPipelineLog('大纲智子 (Outline Agent)', `⚠️ 滚动大纲协同节点超时: ${msg}。`, 'warn');
     } finally {
       pipeline.setRollingOutline(false);
+      // Auto-pilot:本章审校 + 滚动大纲都跑完后,自动跳到下一章继续
+      scheduleAutoAdvance();
+    }
+  };
+
+  /**
+   * Auto-pilot 调度:开启时,本章跑完后自动切到下一章并继续跑。
+   * 直到最后一章或用户主动叫停 / 切换章节。
+   */
+  const scheduleAutoAdvance = () => {
+    if (!usePipelineStore.getState().isAutoPilot) return;
+    if (!activeBookId) return;
+    // 拿最新的 book(rolling outline 刚更新过 chapters)
+    const book = useBooksStore.getState().getBook(activeBookId);
+    if (!book) return;
+
+    const nextIdx = book.currentChapterIndex + 1;
+    if (nextIdx >= book.chapters.length) {
+      addPipelineLog('系统', '🎉 全书所有章节已协同完成!已自动关闭 Auto-Pilot。', 'success');
+      usePipelineStore.getState().setAutoPilot(false);
+      return;
+    }
+    const nextCh = book.chapters[nextIdx];
+    if (nextCh.status === 'completed') {
+      addPipelineLog('系统', `⏭️ 第 ${nextCh.number} 章已存在正文,跳过,继续。`, 'info');
+      useBooksStore.getState().setCurrentChapter(activeBookId, nextIdx);
+      // 递归调度,可能还有更多已完成章节
+      pipelineTimeoutRef.current = setTimeout(scheduleAutoAdvance, 1500);
+      return;
+    }
+
+    addPipelineLog('系统', `🚀 Auto-Pilot 启动:跳转到第 ${nextCh.number} 章《${nextCh.title}》继续创作。`, 'info');
+    useBooksStore.getState().setCurrentChapter(activeBookId, nextIdx);
+    usePipelineStore.getState().setStage('idle');
+    usePipelineStore.getState().clearLogs();
+    usePipelineStore.getState().setActiveHighlights([]);
+    usePipelineStore.getState().setSuggestedLore(null);
+
+    pipelineTimeoutRef.current = setTimeout(() => {
+      runNextPipelineStage();
+    }, 1500);
+  };
+
+  /**
+   * 切换 Auto-Pilot:开启时立即从当前章节开始;关闭时仅停开关不打断当前跑流。
+   */
+  const handleAutoPilotToggle = () => {
+    const wasOn = usePipelineStore.getState().isAutoPilot;
+    if (wasOn) {
+      usePipelineStore.getState().setAutoPilot(false);
+      addPipelineLog('人类导演 (You)', '🛑 Auto-Pilot 已关闭,当前章节跑完后停止自动跳转。', 'warn');
+      return;
+    }
+    if (!activeBook) return;
+    usePipelineStore.getState().setAutoPilot(true);
+    addPipelineLog('系统', '✈️ Auto-Pilot 已开启:从当前章节起,跑完自动跳下一章,直到全书完成。', 'info');
+    // 如果当前 idle,立刻启动
+    if (usePipelineStore.getState().currentStage === 'idle') {
+      runNextPipelineStage();
     }
   };
 
   const handlePausePipeline = () => {
     const pipeline = usePipelineStore.getState();
     pipeline.setRunning(false);
+    pipeline.setAutoPilot(false);
     if (pipelineTimeoutRef.current) {
       clearTimeout(pipelineTimeoutRef.current);
       pipelineTimeoutRef.current = null;
@@ -449,8 +516,9 @@ export default function App() {
     if (!activeBook || !activeBookId) return;
     usePipelineStore.getState().setExtractingLore(true);
     try {
+      const safeBook3 = normalizeBook(activeBook);
       const kbSuggest = await bookApi.suggestKbEntry({
-        title: activeBook.title, worldview: activeBook.worldview, characters: activeBook.characters,
+        title: safeBook3.title, worldview: safeBook3.worldview, characters: safeBook3.characters,
         chapterContent: content, chapterTitle: titleStr,
       });
       usePipelineStore.getState().setSuggestedLore(kbSuggest);
@@ -558,6 +626,8 @@ export default function App() {
 
   const handleChangeChapter = (idx: number) => {
     if (!activeBookId) return;
+    // 用户主动切章节,Auto-Pilot 关闭(避免切回去又被自动跳走)
+    usePipelineStore.getState().setAutoPilot(false);
     useBooksStore.getState().setCurrentChapter(activeBookId, idx);
     usePipelineStore.getState().setStage('idle');
     usePipelineStore.getState().clearLogs();
@@ -594,6 +664,7 @@ export default function App() {
     onAcceptLore: handleAcceptSuggestedLore,
     onDismissLore: handleDismissLore,
     onChangeChapter: handleChangeChapter,
+    onToggleAutoPilot: handleAutoPilotToggle,
   };
 
   // ============ 渲染 ============

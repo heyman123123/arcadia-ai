@@ -20,6 +20,9 @@ interface PipelineState {
   suggestedLore: LoreSuggestion | null;
   isExtractingLore: boolean;
 
+  // 自动驾驶:开启后,本章审校完会自动跳到下一章继续跑
+  isAutoPilot: boolean;
+
   // --- actions ---
   setStage: (s: PipelineStage) => void;
   setRunning: (r: boolean) => void;
@@ -30,12 +33,13 @@ interface PipelineState {
 
   setSuggestedLore: (l: LoreSuggestion | null) => void;
   setExtractingLore: (e: boolean) => void;
+  setAutoPilot: (v: boolean) => void;
 
   /** 切书/重置时调用 */
   resetForNewChapter: () => void;
 }
 
-const INITIAL: Pick<PipelineState, 'currentStage' | 'isRunning' | 'isRollingOutline' | 'logs' | 'activeHighlights' | 'suggestedLore' | 'isExtractingLore'> = {
+const INITIAL: Pick<PipelineState, 'currentStage' | 'isRunning' | 'isRollingOutline' | 'logs' | 'activeHighlights' | 'suggestedLore' | 'isExtractingLore' | 'isAutoPilot'> = {
   currentStage: 'idle',
   isRunning: false,
   isRollingOutline: false,
@@ -43,6 +47,7 @@ const INITIAL: Pick<PipelineState, 'currentStage' | 'isRunning' | 'isRollingOutl
   activeHighlights: [],
   suggestedLore: null,
   isExtractingLore: false,
+  isAutoPilot: false,
 };
 
 export const usePipelineStore = create<PipelineState>((set) => ({
@@ -58,6 +63,7 @@ export const usePipelineStore = create<PipelineState>((set) => ({
 
   setSuggestedLore: (l) => set({ suggestedLore: l }),
   setExtractingLore: (e) => set({ isExtractingLore: e }),
+  setAutoPilot: (v) => set({ isAutoPilot: v }),
 
   resetForNewChapter: () => set({ ...INITIAL }),
 }));

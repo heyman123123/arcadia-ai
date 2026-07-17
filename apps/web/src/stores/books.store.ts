@@ -9,6 +9,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { BookProject, Chapter, Character, KBEntry } from '@arcadia/shared';
+import { normalizeBooks } from '../lib/format';
 
 interface BooksState {
   books: BookProject[];
@@ -103,7 +104,23 @@ export const useBooksStore = create<BooksState>()(
     {
       name: 'arcadia_books',
       storage: createJSONStorage(() => localStorage),
-      version: 1,
+      version: 2,
+      // v1 → v2 迁移:历史数据里 characters.skills 可能是 [{name, description}] 对象,
+      // 全部规整成字符串数组,避免 server zod 校验失败。
+      migrate: (persistedState, fromVersion) => {
+        if (!persistedState || typeof persistedState !== 'object') return persistedState as never;
+        const state = persistedState as { books?: BookProject[] };
+        if (fromVersion < 2 && Array.isArray(state.books)) {
+          return { ...state, books: normalizeBooks(state.books) } as never;
+        }
+        return persistedState as never;
+      },
+      // 每次从 localStorage 读出也兜底规整一次,防止 migrate 因 version 没变而漏掉
+      onRehydrateStorage: () => (state) => {
+        if (state && Array.isArray(state.books)) {
+          state.books = normalizeBooks(state.books);
+        }
+      },
     },
   ),
 );

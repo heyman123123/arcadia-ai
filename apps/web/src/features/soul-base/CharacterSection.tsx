@@ -5,6 +5,7 @@
 import { UserPlus, Trash2, Sparkles } from 'lucide-react';
 import type { Character } from '@arcadia/shared';
 import { Card, Button, Tag } from '../../components';
+import { formatSkill } from '../../lib/format';
 
 interface Props {
   characters: Character[];
@@ -57,11 +58,14 @@ export function CharacterSection({ characters, onAdd, onDelete, onGenerateSkill 
                 </button>
               </div>
               <div className="flex flex-wrap gap-1">
-                {char.skills?.map((sk, skIdx) => (
-                  <Tag key={skIdx} tone="emerald" className="leading-none max-w-full truncate" title={sk}>
-                    ⚡ {sk}
-                  </Tag>
-                ))}
+                {char.skills?.map((sk, skIdx) => {
+                  const label = formatSkill(sk);
+                  return (
+                    <Tag key={skIdx} tone="emerald" className="leading-none max-w-full truncate" title={label}>
+                      ⚡ {label}
+                    </Tag>
+                  );
+                })}
                 {(!char.skills || char.skills.length === 0) && (
                   <span className="text-[10px] text-gray-300 italic">暂无技能</span>
                 )}

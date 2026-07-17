@@ -2,9 +2,10 @@
  * WorkflowProgress - 顶部流水线进度
  */
 
-import { Check, ChevronRight, Activity, Pause, Play } from 'lucide-react';
+import { Check, ChevronRight, Activity, Pause, Play, Plane } from 'lucide-react';
 import { Button } from '../../components';
 import { usePipelineStore } from '../../stores';
+import { cn } from '../../lib/cn';
 import type { ChapterStatus } from '@arcadia/shared';
 
 const STEPS: Array<{ key: ChapterStatus; label: string }> = [
@@ -18,16 +19,18 @@ interface Props {
   chapterStatus: ChapterStatus;
   onRunNext: () => void;
   onPause: () => void;
+  onToggleAutoPilot: () => void;
 }
 
-export function WorkflowProgress({ chapterStatus, onRunNext, onPause }: Props) {
+export function WorkflowProgress({ chapterStatus, onRunNext, onPause, onToggleAutoPilot }: Props) {
   const isRunning = usePipelineStore((s) => s.isRunning);
   const stage = usePipelineStore((s) => s.currentStage);
+  const isAutoPilot = usePipelineStore((s) => s.isAutoPilot);
   const isIdle = stage === 'idle';
 
   return (
-    <div className="h-14 px-6 border-b border-[#F0EBE3] flex items-center justify-between bg-[#FDFBF7] shrink-0">
-      <div className="flex gap-2 items-center text-xs overflow-x-auto custom-scroll pr-4">
+    <div className="h-14 px-6 border-b border-[#F0EBE3] flex items-center justify-between bg-[#FDFBF7] shrink-0 gap-3">
+      <div className="flex gap-2 items-center text-xs overflow-x-auto custom-scroll pr-4 flex-1 min-w-0">
         {STEPS.map((step, idx) => {
           let cls = 'text-gray-400 bg-gray-50 border border-gray-100';
           if (chapterStatus === step.key || (step.key === 'completed' && chapterStatus === 'completed')) {
@@ -51,7 +54,23 @@ export function WorkflowProgress({ chapterStatus, onRunNext, onPause }: Props) {
         })}
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 shrink-0">
+        {/* Auto-Pilot 开关 */}
+        <button
+          onClick={onToggleAutoPilot}
+          className={cn(
+            'flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-[11px] font-bold border transition-colors',
+            isAutoPilot
+              ? 'bg-amber-50 text-amber-700 border-amber-300 hover:bg-amber-100'
+              : 'bg-gray-50 text-gray-500 border-gray-200 hover:bg-gray-100',
+          )}
+          title={isAutoPilot ? '点击关闭 Auto-Pilot' : '点击开启:跑完本章自动跳下一章,直到全书完成'}
+        >
+          <Plane className={cn('w-3.5 h-3.5', isAutoPilot && 'fill-current')} />
+          Auto-Pilot
+          {isAutoPilot && <span className="ml-1 w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />}
+        </button>
+
         {isRunning ? (
           <div className="flex items-center gap-2 bg-[#F0F2EF] px-3 py-1.5 rounded-full border border-emerald-100">
             <span className="w-2 h-2 rounded-full bg-[#788E76] animate-ping"></span>
