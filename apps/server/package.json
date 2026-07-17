@@ -8,8 +8,9 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "start": "node dist/index.js",
-    "build": "tsc",
+    "build": "tsc && node scripts/copy-assets.mjs",
     "lint": "tsc --noEmit",
+    "test:migrator": "tsx scripts/test-migrator.ts",
     "clean": "mavis-trash dist"
   },
   "dependencies": {

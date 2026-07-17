@@ -15,9 +15,15 @@ import { apiRouter } from './routes';
 import { isProd } from './config';
 import { attachViteDev } from './vite/dev';
 import { attachStaticProd } from './vite/prod';
+import { getBookRepository } from './repositories';
 
 export async function createApp(): Promise<Express> {
   const app = express();
+
+  // 启动期就初始化 repository:跑 migrations、打开 DB 连接
+  // 这样 schema 错误在启动期就抛,而不是等到第一个用户请求才挂
+  // 内存后端不会有副作用,直接走 default 路径
+  getBookRepository();
 
   // 基础 middleware
   app.use(express.json({ limit: '5mb' })); // 富文本可能较大

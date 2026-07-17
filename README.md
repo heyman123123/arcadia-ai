@@ -149,6 +149,17 @@ pnpm --filter @arcadia/server start # 跑后端生产 build
 - 切回内存模式: `STORAGE=memory pnpm dev`(进程重启数据丢)
 - 健康检查端点 `GET /api/health` 报告 `db.count` 和 `backend`
 
+### Schema 迁移
+
+SQL schema 变更走**版本化迁移**(`apps/server/src/infrastructure/db/migrations/`)。
+
+- 启动期自动跑所有 pending migration(`migrator.up()`,事务执行,失败回滚)
+- 每条 migration 一个 `.sql` 文件,命名 `NNN_snake_name.sql`,按数字升序跑
+- 已 applied 的记录在 `schema_migrations` 表(version + checksum),改老文件会触发 WARN 提醒
+- 改 `BookProject` 字段**不需要** SQL 迁移(数据存 JSON,自动容纳);加新表/新列/新索引才需要新 `.sql`
+- 详细规则 & 写作指南见 [`apps/server/src/infrastructure/db/README.md`](apps/server/src/infrastructure/db/README.md)
+- 测试:`pnpm --filter @arcadia/server test:migrator`(5 个场景:全新 / 幂等 / 升级 / 错误 SQL / 改老文件)
+
 ## 🤖 AI 客户端
 
 `infrastructure/ai-client/` 抽象了 AI 调用:
@@ -211,6 +222,9 @@ pnpm --filter @arcadia/web build
 
 # 清理
 pnpm -r clean             # 删 dist / node_modules
+
+# 迁移系统测试
+pnpm --filter @arcadia/server test:migrator
 ```
 
 ## 🧭 调试
